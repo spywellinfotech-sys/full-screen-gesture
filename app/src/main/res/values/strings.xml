@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Full Screen Gesture</string>
+    <string name="service_description">Adds invisible edge strips so you can swipe from the left or right edge to go Back, and swipe up from the bottom for Home or Recents. It does not read your screen.</string>
+</resources>
