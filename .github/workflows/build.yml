@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,3 +37,15 @@ jobs:
         with:
           name: FullScreenGesture-v1.0.0-b${{ github.run_number }}
           path: out/*.apk
+
+      - name: Publish APK to apk branch
+        run: |
+          cp out/*.apk /tmp/
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout --orphan apk
+          git rm -rf . -q
+          cp /tmp/FullScreenGesture-*.apk .
+          git add FullScreenGesture-*.apk
+          git commit -q -m "APK build ${GITHUB_RUN_NUMBER}"
+          git push -f origin apk
