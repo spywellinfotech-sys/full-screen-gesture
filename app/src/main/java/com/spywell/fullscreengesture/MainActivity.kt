@@ -1,7 +1,10 @@
 package com.spywell.fullscreengesture
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
@@ -11,12 +14,27 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
+import android.widget.Toast
 import android.widget.Switch
 import android.widget.TextView
 
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
+    private var updatingNav = false
+    private val secure = "android.permission.WRITE_SECURE_SETTINGS"
+    private val grantCmd = "pm grant com.spywell.fullscreengesture android.permission.WRITE_SECURE_SETTINGS"
+
+    private val navStatus by lazy {
+        TextView(this).apply { textSize = 14f; setPadding(0, dp(8), 0, dp(8)) }
+    }
+    private val navSwitch by lazy {
+        Switch(this).apply {
+            text = "Hide phone's navigation buttons"
+            textSize = 15f
+            setPadding(0, dp(8), 0, dp(8))
+        }
+    }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
@@ -62,6 +80,32 @@ class MainActivity : Activity() {
         root.addView(toggle("Bottom swipe up → Home (hold → Recents)", Prefs.BOTTOM))
         root.addView(toggle("Vibrate on gesture", Prefs.HAPTIC))
 
+        root.addView(section("Hide phone's own navigation buttons"))
+        root.addView(navStatus)
+        root.addView(Button(this).apply {
+            text = "Open phone navigation settings"
+            setOnClickListener { startActivity(Intent(Settings.ACTION_SETTINGS)) }
+        })
+        root.addView(navSwitch)
+        root.addView(Button(this).apply {
+            text = "Copy one-time setup command"
+            setOnClickListener {
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("cmd", grantCmd))
+                Toast.makeText(this@MainActivity, "Command copied", Toast.LENGTH_SHORT).show()
+            }
+        })
+        root.addView(TextView(this).apply {
+            text = "Android does not let normal apps hide the buttons. Option 1: in your phone's own " +
+                "Settings, switch to gesture / full screen navigation (usually under Display, System " +
+                "or Additional settings). Option 2: run the copied command once using Wireless " +
+                "debugging (Developer options) in an on-phone ADB app such as LADB, then this switch " +
+                "works. Note: hiding the buttons turns on your phone's own gestures, so turn off the " +
+                "same edge here if both fire together."
+            textSize = 13f
+            alpha = 0.75f
+        })
+
         root.addView(section("Size"))
         root.addView(slider("Side edge width", Prefs.EDGE_DP, 12, 48, Prefs.edgeDp(this)))
         root.addView(slider("Bottom strip height", Prefs.BOTTOM_DP, 12, 48, Prefs.bottomDp(this)))
@@ -84,6 +128,43 @@ class MainActivity : Activity() {
         val on = isServiceOn()
         status.text = if (on) "● Active — gestures are working" else "○ Off — turn on \"Full Screen Gesture\" in Accessibility settings"
         status.setTextColor(if (on) 0xFF2E7D32.toInt() else 0xFFC62828.toInt())
+        refreshNav()
+    }
+
+    private fun hasSecure() = checkSelfPermission(secure) == PackageManager.PERMISSION_GRANTED
+
+    private fun refreshNav() {
+        val ok = hasSecure()
+        val hidden = Settings.Secure.getInt(contentResolver, "navigation_mode", 0) == 2
+        navStatus.text = if (ok) "● Switch is ready" else "○ Switch needs one-time setup (see below)"
+        navStatus.setTextColor(if (ok) 0xFF2E7D32.toInt() else 0xFFC62828.toInt())
+        updatingNav = true
+        navSwitch.isEnabled = ok
+        navSwitch.isChecked = hidden
+        updatingNav = false
+        navSwitch.setOnCheckedChangeListener { _, checked ->
+            if (updatingNav) return@setOnCheckedChangeListener
+            if (!setNavHidden(checked)) {
+                Toast.makeText(this, "Could not change. Do the one-time setup first.", Toast.LENGTH_LONG).show()
+                refreshNav()
+            }
+        }
+    }
+
+    private fun setNavHidden(hide: Boolean): Boolean = try {
+        val sp = Prefs.sp(this)
+        if (hide) {
+            val cur = Settings.Secure.getInt(contentResolver, "navigation_mode", 0)
+            if (cur != 2) sp.edit().putInt("prev_nav_mode", cur).apply()
+            Settings.Secure.putInt(contentResolver, "navigation_mode", 2)
+            runCatching { Settings.Global.putInt(contentResolver, "force_fsg_nav_bar", 1) }
+        } else {
+            Settings.Secure.putInt(contentResolver, "navigation_mode", sp.getInt("prev_nav_mode", 0))
+            runCatching { Settings.Global.putInt(contentResolver, "force_fsg_nav_bar", 0) }
+        }
+        true
+    } catch (e: Exception) {
+        false
     }
 
     private fun isServiceOn(): Boolean {

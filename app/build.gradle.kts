@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = buildNo.toInt().coerceAtLeast(1)
-        versionName = "1.0.0-b$buildNo"
+        versionName = "1.1.0-b$buildNo"
     }
 
     buildTypes {

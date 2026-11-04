@@ -9,4 +9,4 @@ Edge-swipe navigation for Android, so the phone can run without on-screen naviga
 Uses an Accessibility Service with thin invisible edge strips. It does not read the screen.
 Edge width, bottom height, per-edge toggles and vibration are adjustable in the app.
 
-Every build carries a version tag `1.0.0-b<run number>` in the APK file name and on the app's main screen.
+Every build carries a version tag `1.1.0-b<run number>` in the APK file name and on the app's main screen.

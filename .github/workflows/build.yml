@@ -32,11 +32,11 @@ jobs:
       - name: Name APK with build tag
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk "out/FullScreenGesture-v1.0.0-b${GITHUB_RUN_NUMBER}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "out/FullScreenGesture-v1.1.0-b${GITHUB_RUN_NUMBER}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FullScreenGesture-v1.0.0-b${{ github.run_number }}
+          name: FullScreenGesture-v1.1.0-b${{ github.run_number }}
           path: out/*.apk
 
       - name: Publish APK to apk branch
